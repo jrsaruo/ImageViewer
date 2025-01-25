@@ -325,6 +325,17 @@ extension MediaViewerInteractivePopTransition: UIViewControllerInteractiveTransi
                 toolbar.layer.removeAllAnimations()
             }
             
+            /*
+             [Workaround]
+             Some UI components have animations when retrying cancel,
+             so remove animations to prevent them from getting unresponsive.
+             */
+            let isRetrying = self.skippedEndingActionBeforeStart != nil
+            if isRetrying {
+                navigationBar.removeAllAnimationsRecursively()
+                toolbar.removeAllAnimationsRecursively()
+            }
+            
             transitionContext.completeTransition(true)
         }
         finishAnimator.startAnimation()
@@ -384,6 +395,18 @@ extension MediaViewerInteractivePopTransition: UIViewControllerInteractiveTransi
             let pageControlToolbar = mediaViewer.pageControlToolbar
             pageControlToolbar.translatesAutoresizingMaskIntoConstraints = false
             mediaViewer.didCancelInteractivePopTransition()
+            
+            /*
+             [Workaround]
+             Some UI components have animations when retrying cancel,
+             so remove animations to prevent them from getting unresponsive.
+             */
+            let isRetrying = self.skippedEndingActionBeforeStart != nil
+            if isRetrying {
+                navigationController.navigationBar.removeAllAnimationsRecursively()
+                toolbar.removeAllAnimationsRecursively()
+                mediaViewer.pageControlToolbar.removeAllAnimationsRecursively()
+            }
             
             transitionContext.completeTransition(false)
         }
