@@ -3,7 +3,7 @@ name: Ready to Release
 on:
   push:
     branches:
-      - release-**
+      - do-not-merge/**
 
 jobs:
   create-pull-requests-for-release:
@@ -32,7 +32,7 @@ jobs:
           gh pr create \
             --base main \
             --assignee ${{ github.actor }} \
-            --title "Release ${GITHUB_REF_NAME#release-}" \
+            --title "Release ${GITHUB_REF_NAME#do-not-merge/}" \
             --body "" \
             --label "release"
       
