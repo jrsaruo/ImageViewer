@@ -21,6 +21,17 @@ final class MediaViewerInteractivePopTransition: NSObject {
         transitionContext?.viewController(forKey: .to)?.tabBarController?.tabBar
     }
     
+    // MARK: Ending actions
+    
+    enum EndingAction {
+        case finish, cancel
+    }
+    
+    /// An ending action that was skipped because it was tried before starting the transition.
+    ///
+    /// This action should be retried if the transition starts.
+    private var skippedEndingActionBeforeStart: EndingAction?
+    
     // MARK: Backups
     
     private var sourceViewHiddenBackup = false
@@ -221,10 +232,29 @@ extension MediaViewerInteractivePopTransition: UIViewControllerInteractiveTransi
                 toolbar.frame.origin.y = tabBar.frame.origin.y - toolbar.bounds.height
             }
         }
+        
+        // Retry skipped ending action
+        switch skippedEndingActionBeforeStart {
+        case .finish:
+            finishInteractiveTransition()
+        case .cancel:
+            cancelInteractiveTransition()
+        case nil:
+            break // NOP
+        }
     }
     
     private func finishInteractiveTransition() {
-        guard let animator, let transitionContext else { return }
+        guard let animator, let transitionContext else {
+            /*
+             NOTE:
+             When the user quickly swipe down and release the finger,
+             this method is sometimes called before
+             startInteractiveTransition(_:) and enters here.
+             */
+            skippedEndingActionBeforeStart = .finish
+            return
+        }
         transitionContext.finishInteractiveTransition()
         
         animator.continueAnimation(withTimingParameters: nil, durationFactor: 1)
@@ -286,7 +316,12 @@ extension MediaViewerInteractivePopTransition: UIViewControllerInteractiveTransi
             
             // Disable the default animation applied to the toolbar
             if let animationKeys = toolbar.layer.animationKeys() {
-                assert(animationKeys.allSatisfy { $0.starts(with: "position") })
+                assert(
+                    animationKeys.allSatisfy {
+                        $0.starts(with: "UIPacingAnimationForAnimatorsKey")
+                        || $0.starts(with: "position")
+                    }
+                )
                 toolbar.layer.removeAllAnimations()
             }
             
@@ -296,7 +331,16 @@ extension MediaViewerInteractivePopTransition: UIViewControllerInteractiveTransi
     }
     
     private func cancelInteractiveTransition() {
-        guard let animator, let transitionContext else { return }
+        guard let animator, let transitionContext else {
+            /*
+             NOTE:
+             When the user quickly swipe down and release the finger,
+             this method is sometimes called before
+             startInteractiveTransition(_:) and enters here.
+             */
+            skippedEndingActionBeforeStart = .cancel
+            return
+        }
         transitionContext.cancelInteractiveTransition()
         
         animator.isReversed = true
