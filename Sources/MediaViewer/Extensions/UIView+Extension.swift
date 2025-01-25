@@ -28,4 +28,11 @@ extension UIView {
         }
         return nil
     }
+    
+    func removeAllAnimationsRecursively() {
+        layer.removeAllAnimations()
+        for subview in subviews {
+            subview.removeAllAnimationsRecursively()
+        }
+    }
 }
