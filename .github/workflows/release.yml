@@ -1,0 +1,35 @@
+name: Release
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true
+    
+    runs-on: ubuntu-latest
+    
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - id: extract-version
+        name: Extract version
+        run: |
+          echo "version=${GITHUB_HEAD_REF#release-}" >> $GITHUB_OUTPUT
+      
+      - name: Draft the release
+        env:
+          VERSION: ${{ steps.extract-version.outputs.version }}
+        run: |
+          gh release create \
+            $VERSION \
+            --draft \
+            --generate-notes \
+            --title "Release $VERSION"
