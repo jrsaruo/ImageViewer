@@ -1,0 +1,46 @@
+name: Ready to Release
+
+on:
+  push:
+    branches:
+      - release-**
+
+jobs:
+  create-pull-requests-for-release:
+    runs-on: ubuntu-latest
+    
+    env:
+      # PR作成時のワークフローをトリガーするためGITHUB_TOKENではなくPATを使用
+      GITHUB_TOKEN: ${{ secrets.PAT }}
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - id: pr-existence
+        name: Check PR existence
+        run: |
+          echo "pr-to-main-count=$(gh pr list --head $GITHUB_REF_NAME --base main | wc -l)" \
+            >> $GITHUB_OUTPUT
+          echo "pr-to-develop-count=$(gh pr list --head $GITHUB_REF_NAME --base develop | wc -l)" \
+            >> $GITHUB_OUTPUT
+      
+      - name: Create the release PR
+        if: ${{ steps.pr-existence.outputs.pr-to-main-count == 0 }}
+        run: |
+          gh pr create \
+            --base main \
+            --assignee ${{ github.actor }} \
+            --title "Release ${GITHUB_REF_NAME#release-}" \
+            --body "" \
+            --label "release"
+      
+      - name: Create the release PR to develop
+        if: ${{ steps.pr-existence.outputs.pr-to-develop-count == 0 }}
+        run: |
+          gh pr create \
+            --base develop \
+            --assignee ${{ github.actor }} \
+            --fill \
+            --label "ignore-for-release"
